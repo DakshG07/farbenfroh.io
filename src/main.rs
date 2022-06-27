@@ -1,6 +1,9 @@
+use std::path::Path;
+
+use iced::executor;
 #[allow(unused_imports)]
 use iced::{
-    alignment, button, scrollable, slider, text_input, Alignment, Button, Checkbox, Color,
+    alignment, button, scrollable, slider, text_input, Application, Alignment, Button, Checkbox, Color,
     Column, Container, ContentFit, Command, Element, Image, Length, Radio, Row, Sandbox,
     Scrollable, Settings, Slider, Space, Text, TextInput, Toggler,
 };
@@ -31,21 +34,26 @@ enum Message {
 
 
 
-impl Sandbox for Faerber {
+impl Application for Faerber {
+    type Executor = executor::Default;
     type Message = Message;
+    type Flags = ();
 
     
-    fn new() -> Self {
-        Self::Fresh {
-            upload: button::State::new(),
-        }
+    fn new(_flags: ()) -> (Faerber, Command<Message>) {
+        (
+            Self::Fresh {
+                upload: button::State::new(),
+            },
+            Command::none(),
+        )
     }
 
     fn title(&self) -> String {
         String::from("Farbenfroh")
     }
     
-    fn update(&mut self, message: Self::Message) {
+    fn update(&mut self, message: Self::Message) -> Command<Message> {
         match message {
             Message::ButtonPressed => {
                 println!("Button pressed");
@@ -59,15 +67,23 @@ impl Sandbox for Faerber {
                     Some(path) => {
                         println!("File selected: {:?}", path);
                         //palettize(path.to_str(), "latte", "result.png");
-                        Command::perform(magic(path.to_str()), Message::Completed);
-                        *self = Self::Finished { upload: button::State::new() }
+                        Command::perform(magic(path.display().to_string()), Message::Completed)
                     },
-                    None => return,
-                };
+                    None => Command::none(),
+                }
+            },
+            Message::Completed(Ok(())) => {
+                println!("Completed");
+                *self = Self::Finished { upload: button::State::new() };
+                Command::none()
+            }
+            Message::Completed(Err(_error)) => {
+                println!("Error");
+                Command::none()
             }
         }
     }
-
+    
         fn view(&mut self) -> Element<Self::Message> {
             let content = match self { 
                 Self::Fresh {upload} => Column::new()
@@ -105,12 +121,10 @@ impl Sandbox for Faerber {
     }
 }
 
-async fn magic(path: Option<&str>) {
+async fn magic(path: String) -> Result<(), Error> {
     palettize(path, "latte", "result.png");
+    Ok(())
 }
 
 #[derive(Debug,Clone)]
-enum Error {
-    APIError,
-    LanguageError,
-}
+enum Error {}
